@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Killeshandra AED Map — County Cavan</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0e1a;
+    --panel: rgba(8, 14, 28, 0.88);
+    --border: rgba(255,255,255,0.07);
+    --accent: #e63946;
+    --accent2: #ff6b6b;
+    --blue: #4fc3f7;
+    --green: #69f0ae;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --pulse: rgba(230, 57, 70, 0.4);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ── MAP WRAPPER ── */
+  #map-container {
+    position: absolute; inset: 0;
+    filter: saturate(1.15) contrast(1.05);
+  }
+
+  #map {
+    width: 100%; height: 100%;
+  }
+
+  /* Dark satellite-style map tinting */
+  .leaflet-tile-pane { filter: brightness(0.75) hue-rotate(200deg) saturate(0.7); }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 800;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
+    background: linear-gradient(180deg, rgba(8,14,28,0.97) 0%, rgba(8,14,28,0) 100%);
+    pointer-events: none;
+  }
+
+  .topbar-left {
+    display: flex; align-items: center; gap: 14px;
+  }
+
+  .brand-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #b91c1c);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 20px rgba(230,57,70,0.5);
+    animation: pulse-brand 2.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-brand {
+    0%, 100% { box-shadow: 0 0 20px rgba(230,57,70,0.5); }
+    50% { box-shadow: 0 0 35px rgba(230,57,70,0.9), 0 0 60px rgba(230,57,70,0.3); }
+  }
+
+  .brand-text h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 15px; font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #fff;
+    line-height: 1.1;
+  }
+
+  .brand-text p {
+    font-size: 11px; color: var(--muted);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .topbar-right {
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 20px;
+    border: 1px solid;
+  }
+
+  .badge-live {
+    color: var(--green); border-color: rgba(105,240,174,0.35);
+    background: rgba(105,240,174,0.08);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  .badge-live::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.2; }
+  }
+
+  .badge-count {
+    color: var(--accent2); border-color: rgba(230,57,70,0.35);
+    background: rgba(230,57,70,0.08);
+  }
+
+  /* ── SIDE PANEL ── */
+  #side-panel {
+    position: absolute; top: 80px; right: 20px; z-index: 800;
+    width: 280px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+    animation: slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .panel-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .panel-icon { font-size: 14px; }
+
+  .aed-list { padding: 8px; }
+
+  .aed-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .aed-item:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(230,57,70,0.2);
+  }
+
+  .aed-item.active {
+    background: rgba(230,57,70,0.08);
+    border-color: rgba(230,57,70,0.35);
+  }
+
+  .aed-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    color: var(--accent);
+    background: rgba(230,57,70,0.12);
+    border: 1px solid rgba(230,57,70,0.3);
+    border-radius: 6px;
+    padding: 3px 6px;
+    min-width: 26px; text-align: center;
+    margin-top: 1px;
+  }
+
+  .aed-info { flex: 1; }
+
+  .aed-name {
+    font-size: 12px; font-weight: 500; color: var(--text);
+    line-height: 1.3;
+  }
+
+  .aed-sub {
+    font-size: 10px; color: var(--muted); margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+
+  .aed-status {
+    font-size: 9px; font-weight: 600;
+    color: var(--green);
+    background: rgba(105,240,174,0.08);
+    border: 1px solid rgba(105,240,174,0.25);
+    border-radius: 4px;
+    padding: 2px 5px;
+    margin-top: 4px; display: inline-block;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+
+  /* ── BOTTOM BAR ── */
+  #bottom-bar {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 800;
+    padding: 16px 24px 48px;
+    background: linear-gradient(0deg, rgba(8,14,28,0.97) 0%, rgba(8,14,28,0) 100%);
+    display: flex; align-items: flex-end; justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .coord-box {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 0.05em;
+    line-height: 1.8;
+  }
+
+  .coord-box span { color: var(--blue); }
+
+  .legend {
+    display: flex; flex-direction: column; gap: 6px; align-items: flex-end;
+  }
+
+  .legend-item {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 10px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+
+  /* ── SCALE BAR ── */
+  #scale-bar {
+    position: absolute; bottom: 52px; left: 24px; z-index: 800;
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  .scale-line {
+    width: 60px; height: 3px;
+    background: linear-gradient(90deg, var(--blue), rgba(79,195,247,0.3));
+    border-radius: 2px;
+  }
+
+  /* ── COMPASS ── */
+  #compass {
+    position: absolute; top: 80px; left: 20px; z-index: 800;
+    width: 56px; height: 56px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    backdrop-filter: blur(20px);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: slide-in-left 0.5s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes slide-in-left {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── ZOOM CONTROLS ── */
+  #zoom-controls {
+    position: absolute; top: 150px; left: 20px; z-index: 800;
+    display: flex; flex-direction: column; gap: 4px;
+    animation: slide-in-left 0.5s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .zoom-btn {
+    width: 36px; height: 36px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    backdrop-filter: blur(20px);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px; color: var(--text);
+    transition: background 0.15s, border-color 0.15s;
+    pointer-events: all;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+
+  .zoom-btn:hover {
+    background: rgba(79,195,247,0.12);
+    border-color: rgba(79,195,247,0.3);
+    color: var(--blue);
+  }
+
+  /* ── TOOLTIP POPUP ── */
+  .leaflet-popup-content-wrapper {
+    background: var(--panel) !important;
+    border: 1px solid rgba(230,57,70,0.4) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 20px rgba(230,57,70,0.2) !important;
+    backdrop-filter: blur(20px);
+    color: var(--text) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    padding: 0 !important;
+  }
+
+  .leaflet-popup-content {
+    margin: 0 !important;
+    padding: 14px 16px !important;
+    min-width: 180px;
+  }
+
+  .leaflet-popup-tip-container { display: none; }
+
+  .popup-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    color: var(--accent2);
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+
+  .popup-addr {
+    font-size: 12px; color: #aab; line-height: 1.4; margin-bottom: 8px;
+  }
+
+  .popup-tag {
+    font-size: 9px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 3px 8px;
+    border-radius: 4px; display: inline-block;
+    color: var(--green);
+    background: rgba(105,240,174,0.1);
+    border: 1px solid rgba(105,240,174,0.25);
+  }
+
+  /* ── GRID OVERLAY ── */
+  #grid-overlay {
+    position: absolute; inset: 0; z-index: 5;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(79,195,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,195,247,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* ── VIGNETTE ── */
+  #vignette {
+    position: absolute; inset: 0; z-index: 6;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(8,14,28,0.55) 100%);
+  }
+
+  /* ── SCANLINE ── */
+  #scanline {
+    position: absolute; inset: 0; z-index: 7;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.04) 3px,
+      rgba(0,0,0,0.04) 4px
+    );
+    opacity: 0.6;
+  }
+
+  /* ── AED MARKER SVG ── */
+  .aed-marker-container {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── EMERGENCY STEPS PANEL ── */
+  #emergency-panel {
+    position: absolute; bottom: 80px; left: 20px; z-index: 800;
+    width: 210px;
+    background: var(--panel);
+    border: 1px solid rgba(230,57,70,0.35);
+    border-radius: 14px;
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(230,57,70,0.1);
+    animation: slide-in-left 0.5s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .emergency-header {
+    background: linear-gradient(135deg, rgba(230,57,70,0.25), rgba(185,28,28,0.15));
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(230,57,70,0.2);
+    display: flex; align-items: center; gap: 7px;
+  }
+
+  .emergency-header span {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent2);
+  }
+
+  .emergency-steps { padding: 10px 12px; }
+
+  .step {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    color: var(--accent);
+    background: rgba(230,57,70,0.12);
+    border: 1px solid rgba(230,57,70,0.25);
+    border-radius: 4px;
+    padding: 2px 5px;
+    min-width: 20px; text-align: center;
+    margin-top: 1px; flex-shrink: 0;
+  }
+
+  .step-text {
+    font-size: 11px; color: var(--text);
+    line-height: 1.35;
+  }
+
+  .step-hint {
+    font-size: 9px; color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* Emergency number highlight */
+  .step-text strong { color: #fff; }
+
+  /* ── COMMUNITY NOTICE ── */
+  #community-notice {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 800;
+    background: rgba(8,14,28,0.85);
+    border: 1px solid rgba(79,195,247,0.2);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    padding: 7px 18px;
+    font-size: 10px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+    text-align: center;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    animation: fade-up 0.6s 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  #community-notice span { color: var(--blue); }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* Leaflet attribution */
+  .leaflet-control-attribution {
+    background: rgba(8,14,28,0.8) !important;
+    color: var(--muted) !important;
+    font-size: 9px !important;
+    border-radius: 4px 0 0 0 !important;
+  }
+
+  .leaflet-control-attribution a { color: var(--blue) !important; }
+
+  /* Hide default zoom */
+  .leaflet-control-zoom { display: none; }
+
+  /* Animate entrance */
+  #side-panel, #compass, #zoom-controls {
+    pointer-events: all;
+  }
+</style>
+</head>
+<body>
+
+<div id="map-container">
+  <div id="map"></div>
+  <div id="grid-overlay"></div>
+  <div id="vignette"></div>
+  <div id="scanline"></div>
+</div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="topbar-left">
+    <div class="brand-icon">❤️</div>
+    <div class="brand-text">
+      <h1>KILLESHANDRA AED NETWORK</h1>
+      <p>County Cavan · Emergency Response Map</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="badge badge-live">Live Map</div>
+    <div class="badge badge-count">6 AED Units</div>
+  </div>
+</div>
+
+<!-- COMPASS -->
+<div id="compass" title="North">🧭</div>
+
+<!-- ZOOM CONTROLS -->
+<div id="zoom-controls">
+  <div class="zoom-btn" id="zoomIn" title="Zoom In">+</div>
+  <div class="zoom-btn" id="zoomOut" title="Zoom Out">−</div>
+</div>
+
+<!-- SIDE PANEL -->
+<div id="side-panel">
+  <div class="panel-header">
+    <span class="panel-title">AED Locations</span>
+    <span class="panel-icon">⚡</span>
+  </div>
+  <div class="aed-list" id="aed-list"></div>
+</div>
+
+<!-- EMERGENCY STEPS -->
+<div id="emergency-panel">
+  <div class="emergency-header">
+    <span>🚨</span>
+    <span>Emergency Steps</span>
+  </div>
+  <div class="emergency-steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-text">Call <strong>999</strong> or <strong>112</strong></div>
+        <div class="step-hint">State location clearly</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-text">Send someone for AED</div>
+        <div class="step-hint">Use this map to locate nearest</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-text">Start CPR</div>
+        <div class="step-hint">Follow dispatcher instructions</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-text">Use AED</div>
+        <div class="step-hint">Device will guide you</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMMUNITY NOTICE -->
+<div id="community-notice">
+  Produced for community awareness in Killeshandra &nbsp;·&nbsp;
+  <span>All locations are Public / Private Access Defibrillators</span>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottom-bar">
+  <div>
+    <div id="scale-bar">
+      <div class="scale-line"></div>
+      <span>200m</span>
+    </div>
+    <div class="coord-box">
+      LAT <span>54.0139°N</span> &nbsp; LNG <span>7.5282°W</span><br>
+      ALT <span>~72m</span> &nbsp; ZOOM <span id="zoom-label">15</span>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#e63946; box-shadow:0 0 6px #e63946;"></div>AED Defibrillator
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#4fc3f7;"></div>Streets & Roads
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#69f0ae;"></div>Unit Available
+    </div>
+  </div>
+</div>
+
+<script>
+function loadScript(src, cb) {
+  const s = document.createElement('script');
+  s.src = src; s.onload = cb; s.onerror = cb;
+  document.head.appendChild(s);
+}
+
+loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js', function() {
+  if (typeof L === 'undefined') {
+    loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', initMap);
+  } else { initMap(); }
+});
+
+function initMap() {
+// ── AED DATA ──────────────────────────────────────────────────────────────────
+// Locations provided and verified by local knowledge. Eircode listed for reference.
+const aedData = [
+  {
+    id: 1,
+    name: "Scoil Bhríde",
+    address: "Portaliffe, Killeshandra",
+    eircode: "H12 P738",
+    lat: 54.0168,
+    lng: -7.5318,
+    status: "Public Access",
+    installed: "Near Front Door"
+  },
+  {
+    id: 2,
+    name: "Church of Ireland",
+    address: "Church Street, Killeshandra",
+    eircode: "H12 K6F6",
+    lat: 54.0148,
+    lng: -7.5300,
+    status: "Public Access",
+    installed: "Near Front Door"
+  },
+  {
+    id: 3,
+    name: "Community Hall",
+    address: "Killeshandra",
+    eircode: "H12 C8X2",
+    lat: 54.0152,
+    lng: -7.5272,
+    status: "Public Access",
+    installed: "Near Front Door"
+  },
+  {
+    id: 4,
+    name: "Resource Centre",
+    address: "Killeshandra",
+    eircode: "H12 A3X3",
+    lat: 54.0138,
+    lng: -7.5285,
+    status: "Public Access",
+    installed: "Near Front Door"
+  },
+  {
+    id: 5,
+    name: "Killeshandra Lodge",
+    address: "Killeshandra",
+    eircode: "H12 Y402",
+    lat: 54.0125,
+    lng: -7.5260,
+    status: "Private Access",
+    installed: "Outside Gates"
+  },
+  {
+    id: 6,
+    name: "Killeshandra GAA Club",
+    address: "Rockfield, Killeshandra",
+    eircode: "H12 WC78",
+    lat: 54.0112,
+    lng: -7.5240,
+    status: "Private Access",
+    installed: "Inside Main Gate"
+  }
+];
+
+// ── MAP INIT ─────────────────────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [54.0139, -7.5282],
+  zoom: 15,
+  zoomControl: false,
+  attributionControl: true,
+});
+
+// Satellite-style base layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19,
+}).addTo(map);
+
+// ── CUSTOM AED ICON ───────────────────────────────────────────────────────────
+function makeAedIcon(num) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54">
+      <defs>
+        <filter id="glow${num}">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="bg${num}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ff4757"/>
+          <stop offset="100%" stop-color="#b91c1c"/>
+        </radialGradient>
+      </defs>
+      <!-- Outer glow ring -->
+      <circle cx="22" cy="22" r="20" fill="none" stroke="#e63946" stroke-width="1.5" opacity="0.4">
+        <animate attributeName="r" values="18;22;18" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5;0.1;0.5" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Main circle -->
+      <circle cx="22" cy="22" r="17" fill="url(#bg${num})" filter="url(#glow${num})"/>
+      <!-- Heart -->
+      <path d="M22 29 C22 29 13 23 13 18 C13 15 15 13 18 13 C20 13 21.5 14.5 22 16 C22.5 14.5 24 13 26 13 C29 13 31 15 31 18 C31 23 22 29 22 29Z"
+            fill="white" opacity="0.95"/>
+      <!-- Lightning bolt -->
+      <path d="M21 17 L19 22 L22 22 L20 28 L25 21 L22 21 L24 17Z"
+            fill="#fff700" opacity="0.9" stroke="#e6a800" stroke-width="0.3"/>
+      <!-- Number badge -->
+      <circle cx="33" cy="10" r="9" fill="#0a0e1a" stroke="#e63946" stroke-width="1.5"/>
+      <text x="33" y="14" text-anchor="middle" font-family="'Space Mono',monospace" font-size="9" font-weight="700" fill="#ff6b6b">${num}</text>
+      <!-- Stem -->
+      <line x1="22" y1="39" x2="22" y2="52" stroke="#e63946" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="22" cy="52" r="2.5" fill="#e63946" opacity="0.6"/>
+    </svg>
+  `;
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [44, 54],
+    iconAnchor: [22, 52],
+    popupAnchor: [0, -50],
+  });
+}
+
+// ── MARKERS & POPUP ───────────────────────────────────────────────────────────
+const markers = [];
+
+aedData.forEach((aed, i) => {
+  const icon = makeAedIcon(aed.id);
+  const marker = L.marker([aed.lat, aed.lng], { icon })
+    .addTo(map)
+    .bindPopup(`
+      <div class="popup-title">⚡ AED Unit #${aed.id}</div>
+      <div class="popup-addr">${aed.name}<br><span style="color:#6b7280;font-size:11px">${aed.address}</span></div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#4fc3f7;margin:5px 0 3px;">📮 ${aed.eircode}</div>
+      <div style="font-size:11px;color:#c0c8d8;margin-bottom:6px;">📍 Installed: <strong style="color:#fff">${aed.installed}</strong></div>
+      <div class="popup-tag">✓ ${aed.status}</div>
+    `, { maxWidth: 220 });
+  markers.push(marker);
+});
+
+// ── SIDE PANEL LIST ───────────────────────────────────────────────────────────
+const list = document.getElementById('aed-list');
+aedData.forEach((aed, i) => {
+  const item = document.createElement('div');
+  item.className = 'aed-item';
+  item.id = `aed-item-${aed.id}`;
+  item.innerHTML = `
+    <div class="aed-num">${aed.id}</div>
+    <div class="aed-info">
+      <div class="aed-name">${aed.name}</div>
+      <div class="aed-sub">${aed.eircode} · ${aed.installed}</div>
+      <div class="aed-status">✓ ${aed.status}</div>
+    </div>
+  `;
+  item.addEventListener('click', () => {
+    map.setView([aed.lat, aed.lng], 17, { animate: true });
+    setTimeout(() => markers[i].openPopup(), 500);
+    document.querySelectorAll('.aed-item').forEach(el => el.classList.remove('active'));
+    item.classList.add('active');
+  });
+  list.appendChild(item);
+});
+
+// ── ZOOM CONTROLS ─────────────────────────────────────────────────────────────
+document.getElementById('zoomIn').addEventListener('click', () => map.zoomIn());
+document.getElementById('zoomOut').addEventListener('click', () => map.zoomOut());
+
+map.on('zoom', () => {
+  document.getElementById('zoom-label').textContent = map.getZoom();
+});
+
+// Update coords on move
+map.on('mousemove', (e) => {
+  // Could update coords dynamically — kept static for clarity
+});
+
+// ── CINEMATIC INTRO FLY-IN ────────────────────────────────────────────────────
+map.setView([54.0200, -7.5282], 12);
+setTimeout(() => {
+  map.flyTo([54.0139, -7.5282], 15, {
+    animate: true,
+    duration: 3.0,
+    easeLinearity: 0.25,
+  });
+}, 400);
+} // end initMap
+</script>
+</body>
+</html>
