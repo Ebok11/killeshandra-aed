@@ -773,25 +773,25 @@ loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'
 
 function initMap() {
 // ── AED DATA ──────────────────────────────────────────────────────────────────
-// Locations provided and verified by local knowledge. Eircode listed for reference.
+// Coordinates verified via Google Places — exact building locations
 const aedData = [
   {
     id: 1,
     name: "Scoil Bhríde",
     address: "Portaliffe, Killeshandra",
     eircode: "H12 P738",
-    lat: 54.0168,
-    lng: -7.5318,
+    lat: 54.0067833,
+    lng: -7.5259271,
     status: "Public Access",
     installed: "Near Front Door"
   },
   {
     id: 2,
     name: "Church of Ireland",
-    address: "Church Street, Killeshandra",
+    address: "Main St, Killeshandra",
     eircode: "H12 K6F6",
-    lat: 54.0148,
-    lng: -7.5300,
+    lat: 54.0126703,
+    lng: -7.5275576,
     status: "Public Access",
     installed: "Near Front Door"
   },
@@ -800,38 +800,38 @@ const aedData = [
     name: "Community Hall",
     address: "Killeshandra",
     eircode: "H12 C8X2",
-    lat: 54.0152,
-    lng: -7.5272,
+    lat: 54.0135428,
+    lng: -7.5296517,
     status: "Public Access",
     installed: "Near Front Door"
   },
   {
     id: 4,
     name: "Resource Centre",
-    address: "Killeshandra",
+    address: "Main St, Killeshandra",
     eircode: "H12 A3X3",
-    lat: 54.0138,
-    lng: -7.5285,
+    lat: 54.0129902,
+    lng: -7.5268632,
     status: "Public Access",
     installed: "Near Front Door"
   },
   {
     id: 5,
     name: "Killeshandra Lodge",
-    address: "Killeshandra",
+    address: "Castle St, Killeshandra",
     eircode: "H12 Y402",
-    lat: 54.0125,
-    lng: -7.5260,
+    lat: 54.0152458,
+    lng: -7.5263264,
     status: "Private Access",
     installed: "Outside Gates"
   },
   {
     id: 6,
     name: "Killeshandra GAA Club",
-    address: "Rockfield, Killeshandra",
+    address: "Portaliff, Killeshandra",
     eircode: "H12 WC78",
-    lat: 54.0112,
-    lng: -7.5240,
+    lat: 54.0108534,
+    lng: -7.5263858,
     status: "Private Access",
     installed: "Inside Main Gate"
   }
@@ -949,9 +949,9 @@ map.on('mousemove', (e) => {
 });
 
 // ── CINEMATIC INTRO FLY-IN ────────────────────────────────────────────────────
-map.setView([54.0200, -7.5282], 12);
+map.setView([54.0120, -7.5270], 13);
 setTimeout(() => {
-  map.flyTo([54.0139, -7.5282], 15, {
+  map.flyTo([54.0120, -7.5270], 15, {
     animate: true,
     duration: 3.0,
     easeLinearity: 0.25,
